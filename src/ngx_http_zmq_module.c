@@ -10,6 +10,7 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 #include <zmq.h>
+#include "conn_pool.h"
 
 static char* ngx_http_zmq(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
 
@@ -23,7 +24,7 @@ static char* ngx_http_zmq_merge_loc_conf(ngx_conf_t *cf, void *parent, void *chi
 typedef struct {
     ngx_flag_t  zmq;
     ngx_str_t zmq_endpoint;
-    void* ctx;
+    connpool * m_cpool;
 } ngx_http_zmq_loc_conf_t;
 
 /* Module Directives
@@ -97,24 +98,18 @@ ngx_http_zmq_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_http_zmq_loc_conf_t *prev = parent;
     ngx_http_zmq_loc_conf_t *conf = child;
 
-    if (prev->ctx && prev->ctx != conf->ctx)
-    {
-      if (conf->ctx)
-	zmq_term(conf->ctx);
-      conf->ctx = prev->ctx;
-    }
-    else if (conf->ctx)
-      prev->ctx = conf->ctx;
-    else
-      prev->ctx = conf->ctx = zmq_init(1);
+    ngx_conf_merge_str_value(conf->zmq_endpoint, prev->zmq_endpoint, "");
     
-    ngx_conf_merge_str_value(conf->zmq_endpoint, prev->zmq_endpoint, "Hello World!");
-
-    if (conf->zmq_endpoint.len < 1) {
-        ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-                           "You can't specify a blank string for the zmq_endpoint directive");
-        return NGX_CONF_ERROR;
+    if (prev->m_cpool && prev->m_cpool != conf->m_cpool)
+    {
+      if (conf->m_cpool)
+	free_pool(&(conf->m_cpool));
+      conf->m_cpool = prev->m_cpool;
     }
+    else if (conf->m_cpool)
+      prev->m_cpool = conf->m_cpool;
+    else
+      prev->m_cpool = conf->m_cpool = init_pool(zmq_init(1), cf->pool, ZMQ_REQ);
 
     return NGX_CONF_OK;
 }
@@ -153,8 +148,10 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
     // Get access to the module config variables
     ngx_http_zmq_loc_conf_t  *zmq_config;
     zmq_config = ngx_http_get_module_loc_conf(r, ngx_http_zmq_module);
+    /*set the parameters, because things are stupid*/
+    set_endpt(zmq_config->m_cpool, zmq_config->zmq_endpoint);
 #if DEBUG
-    fprintf(stderr, "context: %ld\n", (long)zmq_config->ctx);
+    fprintf(stderr, "context: %ld\n", (long)zmq_config->m_cpool->m_ctx);
 #endif
 /* --------------- BEGIN MAGIC ------------------------- */
 #if DEBUG
@@ -187,11 +184,9 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
     fprintf(stderr, "Attempt at getting message body: %s\n", (char*)input);
 #endif
     /* ----------- ZMQ LOOPY THING -------------- */
-    void* sock = zmq_socket(zmq_config->ctx, ZMQ_REQ);
-    char* endpt = ngx_pcalloc(r->pool, zmq_config->zmq_endpoint.len+1);
+    conn* con = get_conn(zmq_config->m_cpool);
+    void* sock = con->m_sock;
     zmq_msg_t msg;
-    ngx_memcpy(endpt, zmq_config->zmq_endpoint.data, zmq_config->zmq_endpoint.len);
-    zmq_connect(sock, endpt);
     zmq_send(sock, input , (int)r->headers_in.content_length_n, 0);
     zmq_msg_init(&msg);
     zmq_msg_recv(&msg, sock, 0);
@@ -204,7 +199,7 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
     fprintf(stderr, "sending back: %s\n", (char*)string);
 #endif
     zmq_msg_close(&msg);
-    zmq_close(sock);
+    rel_conn(zmq_config->m_cpool, &con);
     /* ----------- END ZMQ LOOPY THING -----------*/
 
 /* --------------- END MAGIC ------------------------- */
