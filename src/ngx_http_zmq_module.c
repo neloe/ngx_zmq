@@ -149,7 +149,7 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
     ngx_buf_t    *b;
     ngx_chain_t   out;
     unsigned char *string;
-    ngx_int_t mlen;
+    ngx_int_t mlen = 0;
 
     // Get access to the module config variables
     ngx_http_zmq_loc_conf_t  *zmq_config;
@@ -157,17 +157,44 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
 #if DEBUG
     fprintf(stderr, "context: %ld\n", (long)zmq_config->ctx);
 #endif
-    if (!(r->method & (NGX_HTTP_GET|NGX_HTTP_HEAD))) {
-        return NGX_HTTP_NOT_ALLOWED;
+/* --------------- BEGIN MAGIC ------------------------- */
+#if DEBUG
+    fprintf(stderr, "request body: %ld\n", (long) r->request_body);
+    fprintf(stderr, "content length: %d\n", (int) r->headers_in.content_length_n);
+    char * req = ngx_pcalloc(r->pool, (int)r->request_length+1);
+    ngx_memcpy(req, r->request_start, (int)r->request_length);
+    fprintf(stderr, "request: %s\n", req);
+#endif
+    /* If there's an empty body, it's a bad request */
+    if (r->headers_in.content_length_n <= 0)
+    {
+      r->headers_out.status = NGX_HTTP_BAD_REQUEST;
+      r->header_only = 1;
+      r->headers_out.content_length_n = 0;
+      return ngx_http_send_header(r);
     }
-
+#if 0
+    unsigned char *input;
+    input = ngx_pcalloc(r->pool, r->headers_in.content_length_n+1);
+    unsigned char *it = input;
+    /* get the message? */
+    ngx_chain_t * c1;
+    for (c1 = r->request_body->bufs; c1; c1 = c1 -> next)
+    {
+      ngx_memcpy(it, c1->buf->pos, (c1->buf->last - c1->buf->pos));
+      it += (c1->buf->last - c1->buf->pos);
+    }
+#if DEBUG
+    fprintf(stderr, "Attempt at getting message body: %s\n", (char*)input);
+#endif
+#endif
     /* ----------- ZMQ LOOPY THING -------------- */
     void* sock = zmq_socket(zmq_config->ctx, ZMQ_REQ);
     char* endpt = ngx_pcalloc(r->pool, zmq_config->zmq_endpoint.len+1);
     zmq_msg_t msg;
     ngx_memcpy(endpt, zmq_config->zmq_endpoint.data, zmq_config->zmq_endpoint.len);
     zmq_connect(sock, endpt);
-    zmq_send(sock, "Hello", 5, 0);
+    zmq_send(sock, (char*)r->request_start , (int)r->headers_in.content_length_n, 0);
     zmq_msg_init(&msg);
     zmq_msg_recv(&msg, sock, 0);
     mlen = zmq_msg_size(&msg);
@@ -181,6 +208,8 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
     zmq_msg_close(&msg);
     zmq_close(sock);
     /* ----------- END ZMQ LOOPY THING -----------*/
+
+/* --------------- END MAGIC ------------------------- */
     
     rc = ngx_http_discard_request_body(r);
 
@@ -211,12 +240,6 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
 
     //string = ngx_palloc(r->pool, zmq_config->zmq_endpoint.len);
     ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "zmq_endpoint: %s", zmq_config->zmq_endpoint.data);
-    /*if (string == NULL) {
-        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "Failed to allocate memory for zmq_endpoint.");
-        return NGX_HTTP_INTERNAL_SERVER_ERROR;
-    }
-    ngx_memcpy(string, zmq_config->zmq_endpoint.data, zmq_config->zmq_endpoint.len);
-*/
     b->pos = string; /* first position in memory of the data */
     b->last = string + mlen; /* last position */
 
