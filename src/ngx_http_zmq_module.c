@@ -149,6 +149,7 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
     ngx_buf_t    *b;
     ngx_chain_t   out;
     unsigned char *string;
+    ngx_int_t mlen;
 
     // Get access to the module config variables
     ngx_http_zmq_loc_conf_t  *zmq_config;
@@ -163,21 +164,28 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
     /* ----------- ZMQ LOOPY THING -------------- */
     void* sock = zmq_socket(zmq_config->ctx, ZMQ_REQ);
     char* endpt = ngx_pcalloc(r->pool, zmq_config->zmq_endpoint.len+1);
-    char rbuff[10] = {};
-    memcpy(endpt, zmq_config->zmq_endpoint.data, zmq_config->zmq_endpoint.len);
+    zmq_msg_t msg;
+    ngx_memcpy(endpt, zmq_config->zmq_endpoint.data, zmq_config->zmq_endpoint.len);
     zmq_connect(sock, endpt);
     zmq_send(sock, "Hello", 5, 0);
-    zmq_recv(sock, rbuff, 10, 0);
+    zmq_msg_init(&msg);
+    zmq_msg_recv(&msg, sock, 0);
+    mlen = zmq_msg_size(&msg);
+    string = ngx_pcalloc(r->pool, mlen+1);
+    ngx_memcpy(string, zmq_msg_data(&msg), mlen);
+    
 #if DEBUG
-    fprintf(stderr, "Got a reply, it is: %s\n", rbuff);
+    fprintf(stderr, "Got a reply, it is: %s with length %d\n", (char*)zmq_msg_data(&msg), (int)mlen);
+    fprintf(stderr, "sending back: %s\n", (char*)string);
 #endif
+    zmq_msg_close(&msg);
     zmq_close(sock);
     /* ----------- END ZMQ LOOPY THING -----------*/
     
     rc = ngx_http_discard_request_body(r);
 
     r->headers_out.status = NGX_HTTP_OK;
-    r->headers_out.content_length_n = zmq_config->zmq_endpoint.len;
+    r->headers_out.content_length_n = mlen;
     r->headers_out.content_type.len = sizeof("text/html") - 1;
     r->headers_out.content_type.data = (u_char *) "text/html";
 
@@ -201,16 +209,16 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
     out.buf = b;
     out.next = NULL;
 
-    string = ngx_palloc(r->pool, zmq_config->zmq_endpoint.len);
+    //string = ngx_palloc(r->pool, zmq_config->zmq_endpoint.len);
     ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "zmq_endpoint: %s", zmq_config->zmq_endpoint.data);
-    if (string == NULL) {
+    /*if (string == NULL) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "Failed to allocate memory for zmq_endpoint.");
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
     ngx_memcpy(string, zmq_config->zmq_endpoint.data, zmq_config->zmq_endpoint.len);
-
+*/
     b->pos = string; /* first position in memory of the data */
-    b->last = string + zmq_config->zmq_endpoint.len; /* last position */
+    b->last = string + mlen; /* last position */
 
     b->memory = 1; /* content is in read-only memory */
     /* (i.e., filters should copy it rather than rewrite in place) */
