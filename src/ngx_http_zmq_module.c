@@ -17,7 +17,6 @@ static void* ngx_http_zmq_create_loc_conf(ngx_conf_t *cf);
 
 static char* ngx_http_zmq_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child);
 
-
 /* Module Configuration Struct
 	ngx_http__(main|srv|loc)_conf_t
 */
@@ -159,11 +158,12 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
 #endif
 /* --------------- BEGIN MAGIC ------------------------- */
 #if DEBUG
-    fprintf(stderr, "request body: %ld\n", (long) r->request_body);
+    /*fprintf(stderr, "request body: %ld\n", (long) r->request_body);
     fprintf(stderr, "content length: %d\n", (int) r->headers_in.content_length_n);
     char * req = ngx_pcalloc(r->pool, (int)r->request_length+1);
     ngx_memcpy(req, r->request_start, (int)r->request_length);
-    fprintf(stderr, "request: %s\n", req);
+    fprintf(stderr, "request: %s\n", req);*/
+    fprintf(stderr, "rb: %ld\n", (long)r->request_body);
 #endif
     /* If there's an empty body, it's a bad request */
     if (r->headers_in.content_length_n <= 0)
@@ -173,7 +173,6 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
       r->headers_out.content_length_n = 0;
       return ngx_http_send_header(r);
     }
-#if 0
     unsigned char *input;
     input = ngx_pcalloc(r->pool, r->headers_in.content_length_n+1);
     unsigned char *it = input;
@@ -187,14 +186,13 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
 #if DEBUG
     fprintf(stderr, "Attempt at getting message body: %s\n", (char*)input);
 #endif
-#endif
     /* ----------- ZMQ LOOPY THING -------------- */
     void* sock = zmq_socket(zmq_config->ctx, ZMQ_REQ);
     char* endpt = ngx_pcalloc(r->pool, zmq_config->zmq_endpoint.len+1);
     zmq_msg_t msg;
     ngx_memcpy(endpt, zmq_config->zmq_endpoint.data, zmq_config->zmq_endpoint.len);
     zmq_connect(sock, endpt);
-    zmq_send(sock, (char*)r->request_start , (int)r->headers_in.content_length_n, 0);
+    zmq_send(sock, input , (int)r->headers_in.content_length_n, 0);
     zmq_msg_init(&msg);
     zmq_msg_recv(&msg, sock, 0);
     mlen = zmq_msg_size(&msg);
@@ -260,6 +258,13 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
 
 }
 
+static ngx_int_t
+ngx_http_zmq_handler1(ngx_http_request_t *r)
+{
+  ngx_http_read_client_request_body(r, (void*)ngx_http_zmq_handler);
+  return NGX_DONE;
+}
+
 static char *
 ngx_http_zmq(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
@@ -267,7 +272,7 @@ ngx_http_zmq(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     ngx_http_core_loc_conf_t  *clcf;
 
     clcf = ngx_http_conf_get_module_loc_conf(cf, ngx_http_core_module);
-    clcf->handler = ngx_http_zmq_handler;
+    clcf->handler = ngx_http_zmq_handler1;
 
     return NGX_CONF_OK;
 }
