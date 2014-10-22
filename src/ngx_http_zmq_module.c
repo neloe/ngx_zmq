@@ -208,7 +208,7 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
       r->headers_out.content_length_n = 0;
       free_conn(&con);
       ngx_http_send_header(r);
-      return NGX_HTTP_NO_CONTENT;
+      return ngx_http_output_filter(r, &out);;
     }
     mlen = zmq_msg_size(&msg);
     string = ngx_pcalloc(r->pool, mlen+1);
