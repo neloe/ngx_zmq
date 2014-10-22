@@ -24,6 +24,7 @@ static char* ngx_http_zmq_merge_loc_conf(ngx_conf_t *cf, void *parent, void *chi
 typedef struct {
     ngx_flag_t  zmq;
     ngx_str_t zmq_endpoint;
+    ngx_int_t zmq_timeout;
     connpool * m_cpool;
 } ngx_http_zmq_loc_conf_t;
 
@@ -53,6 +54,14 @@ static ngx_command_t  ngx_http_zmq_commands[] = {
         ngx_conf_set_str_slot,
         NGX_HTTP_LOC_CONF_OFFSET,
         offsetof(ngx_http_zmq_loc_conf_t, zmq_endpoint),
+        NULL
+    },
+    {
+        ngx_string("zmq_timeout"),
+        NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+        ngx_conf_set_str_slot,
+        NGX_HTTP_LOC_CONF_OFFSET,
+        offsetof(ngx_http_zmq_loc_conf_t, zmq_timeout),
         NULL
     },
     ngx_null_command
@@ -87,7 +96,7 @@ ngx_http_zmq_create_loc_conf(ngx_conf_t *cf)
         return NGX_CONF_ERROR;
     }
     conf->zmq = NGX_CONF_UNSET;
-
+    conf->zmq_timeout = -1;
     return conf;
 }
 
@@ -98,14 +107,9 @@ ngx_http_zmq_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_http_zmq_loc_conf_t *prev = parent;
     ngx_http_zmq_loc_conf_t *conf = child;
 
-    ngx_conf_merge_str_value(conf->zmq_endpoint, prev->zmq_endpoint, "");
-    
+    ngx_conf_merge_str_value(conf->zmq_endpoint, prev->zmq_endpoint, "");  
     if (prev->m_cpool && prev->m_cpool != conf->m_cpool)
-    {
-      if (conf->m_cpool)
-	free_pool(&(conf->m_cpool));
       conf->m_cpool = prev->m_cpool;
-    }
     else if (conf->m_cpool)
       prev->m_cpool = conf->m_cpool;
     else
@@ -150,6 +154,7 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
     zmq_config = ngx_http_get_module_loc_conf(r, ngx_http_zmq_module);
     /*set the parameters, because things are stupid*/
     set_endpt(zmq_config->m_cpool, zmq_config->zmq_endpoint);
+    set_to(zmq_config->m_cpool, zmq_config->zmq_timeout);
 #if DEBUG
     fprintf(stderr, "context: %ld\n", (long)zmq_config->m_cpool->m_ctx);
 #endif

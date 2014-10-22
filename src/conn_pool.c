@@ -12,6 +12,7 @@ connpool* init_pool ( void* ctx, ngx_pool_t* mpool, int stype)
   p->m_ctx = ctx;
   p -> m_mempool = mpool;
   p->m_stype = stype;
+  p->m_to = -2;
   /* not going to set up a connection yet, that will happen later */
   return p;
 }
@@ -26,6 +27,13 @@ void set_endpt ( connpool* cp, ngx_str_t endpt )
   return;
 }
 
+void set_to ( connpool* cp, int to )
+{
+  if (cp->m_to == -2)
+    cp->m_to = to;
+  return;
+}
+
 
 conn* init_conn(connpool* cp)
 {
@@ -34,6 +42,8 @@ conn* init_conn(connpool* cp)
 #endif
   conn * c = ngx_pcalloc(cp->m_mempool, sizeof(conn));
   c->m_sock = zmq_socket(cp->m_ctx, cp->m_stype);
+  zmq_setsockopt(c->m_sock, ZMQ_RCVTIMEO, &(cp->m_to), sizeof(int));
+  zmq_setsockopt(c->m_sock, ZMQ_SNDTIMEO, &(cp->m_to), sizeof(int));
   zmq_connect(c->m_sock, cp->m_endpt);
   return c;
 }
@@ -89,8 +99,8 @@ void free_conn ( conn** con )
 
 void free_pool ( connpool** cp )
 {
-  if ((*cp)->m_endpt)
-    ngx_free((*cp)->m_endpt);
+  if (!(*cp))
+    return;
   conn * it = (*cp)->m_front;
   conn * i = it;
   while (i)

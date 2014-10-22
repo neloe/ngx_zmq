@@ -22,12 +22,14 @@ typedef struct
   char *m_endpt;
   void *m_ctx;
   int m_stype;
+  int m_to;
   ngx_pool_t *m_mempool;
   conn *m_front, *m_back;
 } connpool;
 
 connpool* init_pool( void* ctx, ngx_pool_t* mpool, int stype );
 void set_endpt( connpool* cp, ngx_str_t endpt );
+void set_to(connpool* cp, int to);
 conn* init_conn(connpool* cp);
 conn* get_conn(connpool* cp);
 void  rel_conn(connpool* cp, conn** con);
