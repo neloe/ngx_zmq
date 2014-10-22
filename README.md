@@ -5,7 +5,9 @@ An upstream ZeroMQ module for nginx
 Reference Materials
 -------------------
 search nginx source: http://lxr.nginx.org/ident
+
 simple module: http://www.nginxguts.com/2011/01/how-to-return-a-simple-page/
+
 evans guide: http://www.evanmiller.org/nginx-modules-guide.html
 
 Adding to Nginx
@@ -46,3 +48,8 @@ Start a zmq server (example included in us.cpp)
 g++ us.cpp -lzmq
 ./a.out
 ```
+Curl nginx to get the response from the zmq server with
+```$ curl -X POST -d 'hello' http://localhost/zmq```
+
+Which will give
+`World`
