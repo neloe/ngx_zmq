@@ -213,19 +213,17 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
 
       return NGX_HTTP_INTERNAL_SERVER_ERROR;
   }
-
+  /* configure the output chain */
   out.buf = b;
   out.next = NULL;
-  ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "zmq_endpoint: %s", zmq_config->zmq_endpoint.data);
+  /* set up the buffer */
   b->pos = string; /* first position in memory of the data */
   b->last = string + mlen; /* last position */
-
   b->memory = 1; /* content is in read-only memory */
-  /* (i.e., filters should copy it rather than rewrite in place) */
-
   b->last_buf = 1; /* there will be no more buffers in the request */
 
   rc = ngx_http_send_header(r);
+  
   if (rc == NGX_ERROR || rc > NGX_OK || r->header_only)
       return rc;
 
