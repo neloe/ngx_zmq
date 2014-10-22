@@ -148,7 +148,7 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
     ngx_chain_t   out;
     unsigned char *string;
     ngx_int_t mlen = 0;
-
+    int zrc = 0;
     // Get access to the module config variables
     ngx_http_zmq_loc_conf_t  *zmq_config;
     zmq_config = ngx_http_get_module_loc_conf(r, ngx_http_zmq_module);
@@ -192,9 +192,22 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
     conn* con = get_conn(zmq_config->m_cpool);
     void* sock = con->m_sock;
     zmq_msg_t msg;
-    zmq_send(sock, input , (int)r->headers_in.content_length_n, 0);
+    zrc = zmq_send(sock, input , (int)r->headers_in.content_length_n, 0);
+#if DEBUG
+    fprintf(stderr, "snd_rc: %i\n", zrc);
+#endif
     zmq_msg_init(&msg);
-    zmq_msg_recv(&msg, sock, 0);
+    zrc = zmq_msg_recv(&msg, sock, 0);
+#if DEBUG
+    fprintf(stderr, "rcv_rc: %i\n", zrc);
+#endif
+    if (zrc == -1)
+    {
+      r->headers_out.status = NGX_HTTP_GATEWAY_TIME_OUT;
+      r->header_only = 1;
+      r->headers_out.content_length_n = 0;
+      return ngx_http_send_header(r);
+    }
     mlen = zmq_msg_size(&msg);
     string = ngx_pcalloc(r->pool, mlen+1);
     ngx_memcpy(string, zmq_msg_data(&msg), mlen);
