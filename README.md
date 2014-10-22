@@ -10,6 +10,8 @@ simple module: http://www.nginxguts.com/2011/01/how-to-return-a-simple-page/
 
 evans guide: http://www.evanmiller.org/nginx-modules-guide.html
 
+agentzh explaining nginx: http://openresty.org/download/agentzh-nginx-tutorials-en.html
+
 Adding to Nginx
 ---------------
 ```bash
