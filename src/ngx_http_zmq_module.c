@@ -213,8 +213,8 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
 
     r->headers_out.status = NGX_HTTP_OK;
     r->headers_out.content_length_n = mlen;
-    r->headers_out.content_type.len = sizeof("text/html") - 1;
-    r->headers_out.content_type.data = (u_char *) "text/html";
+    r->headers_out.content_type.len = sizeof("text/plain") - 1;
+    r->headers_out.content_type.data = (u_char *) "text/plain";
 
     if (r->method == NGX_HTTP_HEAD) {
         rc = ngx_http_send_header(r);
