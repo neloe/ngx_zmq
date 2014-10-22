@@ -206,9 +206,7 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
       r->headers_out.status = NGX_HTTP_GATEWAY_TIME_OUT;
       r->header_only = 1;
       r->headers_out.content_length_n = 0;
-      free_conn(&con);
-      ngx_http_send_header(r);
-      return ngx_http_output_filter(r, &out);;
+      return ngx_http_send_header(r);
     }
     mlen = zmq_msg_size(&msg);
     string = ngx_pcalloc(r->pool, mlen+1);
