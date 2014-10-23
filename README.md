@@ -15,7 +15,8 @@ The following features and improvements are planned and in development
 ## Adding to Nginx
 Complation of the module only requires libzmq 3.x+ (as well as nginx).  It has been tested to build against nginx 1.5.12 and 1.7.4 (OpenResty versions). They can be compiled in simply with
 ```bash
-./confugre --add-module=<path_to_ngx_zmq>``` 
+./confugre --add-module=<path_to_ngx_zmq>
+``` 
 from the nginx source directory, followed by your standard `make` and `make install` commands.
 
 
@@ -30,11 +31,13 @@ location /zmq {
 ```
 Assuming a zmq server (example included in us.cpp) is running, a request over ZMQ can be made via
 ```bash
-$curl -X POST -d 'what_to_send' http://localhost/zmq```
+$curl -X POST -d 'what_to_send' http://localhost/zmq
+```
 
 The sample upstream server can be compiled and run with:
 ```bash
-$g++ us.cpp -lzmq; ./a.out```
+$g++ us.cpp -lzmq; ./a.out
+```
 The sample server will always reply with "World"
 
 ### With the lua-nginx-module
