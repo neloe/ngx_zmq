@@ -28,7 +28,6 @@ typedef struct
 
 connpool* init_pool( void* ctx, ngx_pool_t* mpool, int stype );
 void set_endpt( connpool* cp, ngx_str_t endpt );
-void set_to(connpool* cp, int to);
 conn* init_conn(connpool* cp);
 conn* get_conn(connpool* cp);
 void  rel_conn(connpool* cp, conn** con);

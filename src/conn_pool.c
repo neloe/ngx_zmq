@@ -5,7 +5,7 @@
  */
 
 #include "conn_pool.h"
-#define DEBUG 1
+#define DEBUG 0
 connpool* init_pool ( void* ctx, ngx_pool_t* mpool, int stype) 
 {
   connpool * p = ngx_pcalloc(mpool, sizeof(connpool));
@@ -27,14 +27,6 @@ void set_endpt ( connpool* cp, ngx_str_t endpt )
   return;
 }
 
-void set_to ( connpool* cp, int to )
-{
-  if (cp->m_to == -2)
-    cp->m_to = to;
-  fprintf(stderr,"timeout is %d\n", cp->m_to);
-  return;
-}
-
 
 conn* init_conn(connpool* cp)
 {
@@ -43,8 +35,6 @@ conn* init_conn(connpool* cp)
 #endif
   conn * c = malloc(sizeof(conn));
   c->m_sock = zmq_socket(cp->m_ctx, cp->m_stype);
-  zmq_setsockopt(c->m_sock, ZMQ_RCVTIMEO, &(cp->m_to), sizeof(int));
-  zmq_setsockopt(c->m_sock, ZMQ_SNDTIMEO, &(cp->m_to), sizeof(int));
   zmq_connect(c->m_sock, cp->m_endpt);
   return c;
 }
