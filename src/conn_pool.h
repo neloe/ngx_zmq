@@ -23,7 +23,6 @@ typedef struct
   void *m_ctx;
   int m_stype;
   int m_to;
-  ngx_pool_t *m_mempool;
   conn *m_front, *m_back;
 } connpool;
 
