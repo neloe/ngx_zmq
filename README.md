@@ -68,6 +68,7 @@ Using appropriate options.  You could use other request frameworks as well (one 
 
 ## Error handling
 ngx_zmq will give the following codes/request bodies under the specified conditions:
+
 | HTTP Code | Request Body | Condition|
 | Bad Gateway (502) | <empty> | send times out|
 | Gateway Timeout (504) | <empty> | recv times out|
