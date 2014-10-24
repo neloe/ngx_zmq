@@ -200,11 +200,15 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
   if (zrc == -1) /* send errored for some reason */
   {
     ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,"ngx_zmq erroring out on send");
-    free_conn(&con);
     if (zmq_errno() == EAGAIN)
-      return header_err(r, NGX_HTTP_BAD_GATEWAY);
-    else
-      zmq_err_reply(r, &string);
+    {
+      rc = header_err(r, NGX_HTTP_GATEWAY_TIME_OUT);
+      free_conn(&con);
+      return rc;
+    }
+    free_conn(&con);
+    zmq_err_reply(r, &string);
+    mlen = strlen(zmq_strerror(zmq_errno()));
   }
   else
   {
@@ -217,11 +221,14 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
     if (zrc == -1)
     {
       ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,"ngx_zmq erroring out on recv");
+      if (zmq_errno() == EAGAIN)
+      {
+	rc = header_err(r, NGX_HTTP_GATEWAY_TIME_OUT);
+	free_conn(&con);
+	return rc;
+      }
       free_conn(&con);
-      /*if (zmq_errno() == EAGAIN)
-	return header_err(r, NGX_HTTP_GATEWAY_TIME_OUT);    
-      else*/
-        zmq_err_reply(r, &string);
+      zmq_err_reply(r, &string);
       mlen = strlen(zmq_strerror(zmq_errno()));
     }
     else 
