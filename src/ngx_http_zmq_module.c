@@ -215,7 +215,7 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
     {
       zrc = zmq_msg_recv(&msg, sock, ZMQ_NOBLOCK);
     } while (to_ms(clock() - start) < to && zmq_errno() == EAGAIN);
-    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "zmq_ngx recv: zrc: %i, errstr: %s, sizeof(zrc): %i", zrc, zmq_strerror(zmq_errno()), (int)sizeof(zrc));
+    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "zmq_ngx recv: zrc: %i, errstr: %s, sizeof(zrc): %d", zrc, zmq_strerror(zmq_errno()), (int)sizeof(zrc));
     if (zrc == -1)
     {
       ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,"ngx_zmq erroring out on recv");
