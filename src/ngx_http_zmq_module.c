@@ -220,7 +220,7 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
     ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "ngx_zmq recv: zrc: %d, errstr: %s, errno: %d, EAGAIN: %d", zrc, zmq_strerror(zmq_errno()), zmq_errno(), EAGAIN);
     if (zrc == -1)
     {
-      ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,"ngx_zmq erroring out on recv");
+      ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,"ngx_zmq erroring out on recv, %d", zmq_errno());
       if (zmq_errno() == EAGAIN)
       {
 	rc = header_err(r, NGX_HTTP_GATEWAY_TIME_OUT);
