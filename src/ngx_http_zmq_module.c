@@ -198,7 +198,7 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
   {
     zrc = zmq_send(sock, input , (int)r->headers_in.content_length_n, ZMQ_NOBLOCK);
   } while (to_ms(clock() - start) < to && zrc == -1 && zmq_errno() == EAGAIN);
-  ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "zmq_ngx send: zrc: %d, errstr: %s", zrc, zmq_strerror(zmq_errno()));
+  ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "zmq_ngx send: zrc: %d, errstr: %s, errno: %d, EAGAIN: %d", zrc, zmq_strerror(zmq_errno()), zmq_errno(), EAGAIN);
   if (zrc == -1) /* send errored for some reason */
   {
     ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,"ngx_zmq erroring out on send");
@@ -214,8 +214,8 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
     do 
     {
       zrc = zmq_msg_recv(&msg, sock, ZMQ_NOBLOCK);
-    } while (to_ms(clock() - start) < to && zmq_errno() == EAGAIN);
-    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "zmq_ngx recv: zrc: %d, errstr: %s, sizeof(zrc): %d", zrc, zmq_strerror(zmq_errno()), (int)sizeof(zrc));
+    } while (to_ms(clock() - start) < to && zrc == -1 && zmq_errno() == EAGAIN);
+    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "zmq_ngx recv: zrc: %d, errstr: %s, errno: %d, EAGAIN: %d", zrc, zmq_strerror(zmq_errno()), zmq_errno(), EAGAIN);
     if (zrc == -1)
     {
       ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,"ngx_zmq erroring out on recv");
