@@ -171,7 +171,6 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
   /*set the parameters, because things are stupid*/
   set_endpt(zmq_config->m_cpool, zmq_config->zmq_endpoint);
   ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "ngx_zmq got a request with content_length_n %i", (int)r->headers_in.content_length_n);
-  fprintf(stderr, "ngx_zmq got a request with content_length_n %i", (int)r->headers_in.content_length_n);
 /* --------------- BEGIN MAGIC ------------------------- */
 
   /* If there's an empty body, it's a bad request */
@@ -220,9 +219,9 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
     {
       ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,"ngx_zmq erroring out on recv");
       free_conn(&con);
-      if (zmq_errno() == EAGAIN)
+      /*if (zmq_errno() == EAGAIN)
 	return header_err(r, NGX_HTTP_GATEWAY_TIME_OUT);    
-      else
+      else*/
         zmq_err_reply(r, &string);
     }
     else 
