@@ -171,6 +171,7 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
   /*set the parameters, because things are stupid*/
   set_endpt(zmq_config->m_cpool, zmq_config->zmq_endpoint);
   ngx_log_error(NGX_LOG_INFO, r->connection->log, 0, "ngx_zmq got a request with content_length_n %i", (int)r->headers_in.content_length_n);
+  fprintf(stderr, "ngx_zmq got a request with content_length_n %i", (int)r->headers_in.content_length_n);
 /* --------------- BEGIN MAGIC ------------------------- */
 
   /* If there's an empty body, it's a bad request */
