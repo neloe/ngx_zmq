@@ -228,8 +228,10 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
       rel_conn(zmq_config->m_cpool, &con);
       
       mlen = zmq_msg_size(&msg);
+      ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,"ngx_zmq got message of length %i", mlen);
       string = ngx_pcalloc(r->pool, mlen+1);
       ngx_memcpy(string, zmq_msg_data(&msg), mlen);
+      ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,"ngx_zmq got message %s", (char*)string );
       
       zmq_msg_close(&msg);
       
