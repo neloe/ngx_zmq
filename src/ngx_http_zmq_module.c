@@ -146,7 +146,6 @@ static void zmq_err_reply(ngx_http_request_t *r, unsigned char ** string)
   r->headers_out.status = NGX_HTTP_BAD_GATEWAY;
   r->header_only = 0;
   r->headers_out.content_length_n = strlen(zmq_strerror(zmq_errno()));
-  ngx_http_send_header(r);
   *string = ngx_pcalloc(r->pool, strlen(zmq_strerror(zmq_errno())));
   ngx_memcpy(*string, zmq_strerror(zmq_errno()), strlen(zmq_strerror(zmq_errno())));
 }
