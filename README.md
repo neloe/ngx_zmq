@@ -60,7 +60,7 @@ and in Lua (assuming [readurl](https://github.com/jamesmarlowe/lua-resty-readurl
 local reply, err = readurl.capture("/zmq/proxy/my_endpoint/",
                                    {body=thing_to_send},
                                    false,
-                                   {failure_log_level=ngx.CRIT, counter_dict=requests_counter}
+                                   {failure_log_level=ngx.CRIT}
 )
 ```
 Using appropriate options.  You could use other request frameworks as well (one such is mentioned in the above linked issue).
@@ -70,9 +70,8 @@ ngx_zmq will give the following codes/request bodies under the specified conditi
 
 | HTTP Code | Request Body | Condition|
 |-----------|--------------|----------|
-| Bad Gateway (502) | <empty> | send times out|
-| Gateway Timeout (504) | <empty> | recv times out|
-| Bad Gateway (502) | ZeroMQ error message | rev fails, but does not timeout (errno != EAGAIN)|
+| Gateway Timeout (504) | <empty> | send/recv times out|
+| Bad Gateway (502) | ZeroMQ error message | send/recv fails, but does not timeout (errno != EAGAIN)|
 | OK (200) | Response from ZMQ server | successful round-trip (from ZMQ_REQ socket|
 
 ## Reference Materials
