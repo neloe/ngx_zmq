@@ -170,7 +170,7 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
   unsigned int to = atoi((char*)(zmq_config->zmq_timeout.data));
   /*set the parameters, because things are stupid*/
   set_endpt(zmq_config->m_cpool, zmq_config->zmq_endpoint);
-  ngx_log_error(NGX_LOG_INFO, r->connection->log, 0, "ngx_zmq got a request with content_length_n %i", (int)r->headers_in.content_length_n);
+  ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "ngx_zmq got a request with content_length_n %i", (int)r->headers_in.content_length_n);
   fprintf(stderr, "ngx_zmq got a request with content_length_n %i", (int)r->headers_in.content_length_n);
 /* --------------- BEGIN MAGIC ------------------------- */
 
@@ -188,7 +188,7 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
     ngx_memcpy(it, c1->buf->pos, (c1->buf->last - c1->buf->pos));
     it += (c1->buf->last - c1->buf->pos);
   }
-  ngx_log_error(NGX_LOG_INFO, r->connection->log, 0, "zmq_ngx sending %s to %s", (char*)input, zmq_config->m_cpool->m_endpt);
+  ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "zmq_ngx sending %s to %s", (char*)input, zmq_config->m_cpool->m_endpt);
   /* ----------- ZMQ LOOPY THING -------------- */
   conn* con = get_conn(zmq_config->m_cpool);
   void* sock = con->m_sock;
@@ -198,7 +198,7 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
   {
     zrc = zmq_send(sock, input , (int)r->headers_in.content_length_n, ZMQ_NOBLOCK);
   } while (to_ms(clock() - start) < to && zrc == -1 && zmq_errno() == EAGAIN);
-  ngx_log_error(NGX_LOG_INFO, r->connection->log, 0, "zmq_ngx send: zrc: %i, errstr: %s", zrc, zmq_strerror(zmq_errno()));
+  ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "zmq_ngx send: zrc: %i, errstr: %s", zrc, zmq_strerror(zmq_errno()));
   if (zrc == -1) /* send errored for some reason */
   {
     free_conn(&con);
@@ -214,7 +214,7 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
     {
       zrc = zmq_msg_recv(&msg, sock, ZMQ_NOBLOCK);
     } while (to_ms(clock() - start) < to && zmq_errno() == EAGAIN);
-    ngx_log_error(NGX_LOG_INFO, r->connection->log, 0, "zmq_ngx recv: zrc: %i, errstr: %s", zrc, zmq_strerror(zmq_errno()));
+    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "zmq_ngx recv: zrc: %i, errstr: %s", zrc, zmq_strerror(zmq_errno()));
     if (zrc == -1 && zmq_errno() == EAGAIN)
     {
       free_conn(&con);
@@ -274,7 +274,7 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
   if (rc == NGX_ERROR || rc > NGX_OK || r->header_only)
     return rc;
 
-  ngx_log_error(NGX_LOG_INFO, r->connection->log, 0, "ngx_zmq: completed, returning");
+  ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "ngx_zmq: completed, returning");
 
   return ngx_http_output_filter(r, &out);
 
