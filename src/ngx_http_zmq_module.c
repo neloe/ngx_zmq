@@ -141,6 +141,16 @@ static ngx_int_t header_err(ngx_http_request_t *r, ngx_int_t err)
   return ngx_http_send_header(r);
 }
 
+static void zmq_err_reply(ngx_http_request_t *r, unsigned char ** string)
+{
+  r->headers_out.status = NGX_HTTP_BAD_GATEWAY;
+  r->header_only = 0;
+  r->headers_out.content_length_n = strlen(zmq_strerror(zmq_errno()));
+  ngx_http_send_header(r);
+  *string = ngx_pcalloc(r->pool, strlen(zmq_strerror(zmq_errno())));
+  ngx_memcpy(*string, zmq_strerror(zmq_errno()), strlen(zmq_strerror(zmq_errno())));
+}
+
 /* Module Handler
 	ngx_http__handler
 */
@@ -177,6 +187,7 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
     ngx_memcpy(it, c1->buf->pos, (c1->buf->last - c1->buf->pos));
     it += (c1->buf->last - c1->buf->pos);
   }
+  
   /* ----------- ZMQ LOOPY THING -------------- */
   conn* con = get_conn(zmq_config->m_cpool);
   void* sock = con->m_sock;
@@ -185,60 +196,60 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
   do
   {
     zrc = zmq_send(sock, input , (int)r->headers_in.content_length_n, ZMQ_NOBLOCK);
-  } while (to_ms(clock() - start) < to && zmq_errno() == EAGAIN);
-  if (zrc == -1 && zmq_errno() == EAGAIN)
+  } while (to_ms(clock() - start) < to && zrc == -1 && zmq_errno() == EAGAIN);
+  
+  if (zrc == -1) /* send errored for some reason */
   {
     free_conn(&con);
-    return header_err(r, NGX_HTTP_BAD_GATEWAY);
-  }
-  zmq_msg_init(&msg);
-  do 
-  {
-    zrc = zmq_msg_recv(&msg, sock, ZMQ_NOBLOCK);
-  } while (to_ms(clock() - start) < to && zmq_errno() == EAGAIN);
-  if (zrc == -1 && zmq_errno() == EAGAIN)
-  {
     if (zmq_errno() == EAGAIN)
+      return header_err(r, NGX_HTTP_BAD_GATEWAY);
+    else
+      zmq_err_reply(r, &string);
+  }
+  else
+  {
+    zmq_msg_init(&msg);
+    do 
+    {
+      zrc = zmq_msg_recv(&msg, sock, ZMQ_NOBLOCK);
+    } while (to_ms(clock() - start) < to && zmq_errno() == EAGAIN);
+    if (zrc == -1 && zmq_errno() == EAGAIN)
     {
       free_conn(&con);
-      return header_err(r, NGX_HTTP_GATEWAY_TIME_OUT);
+      if (zmq_errno() == EAGAIN)
+	return header_err(r, NGX_HTTP_GATEWAY_TIME_OUT);    
+      else
+        zmq_err_reply(r, &string);
     }
-    
-    free_conn(&con);
-    r->headers_out.status = NGX_HTTP_BAD_GATEWAY;
-    r->header_only = 0;
-    r->headers_out.content_length_n = strlen(zmq_strerror(zmq_errno()));
-    ngx_http_send_header(r);
-    string = ngx_pcalloc(r->pool, strlen(zmq_strerror(zmq_errno())));
-    ngx_memcpy(string, zmq_strerror(zmq_errno()), strlen(zmq_strerror(zmq_errno())));
-  }
-  else 
-  {
-    mlen = zmq_msg_size(&msg);
-    string = ngx_pcalloc(r->pool, mlen+1);
-    ngx_memcpy(string, zmq_msg_data(&msg), mlen);
-    
-    zmq_msg_close(&msg);
-    rel_conn(zmq_config->m_cpool, &con);
-    /* ----------- END ZMQ LOOPY THING -----------*/
-
-  /* --------------- END MAGIC ------------------------- */
-    
-    rc = ngx_http_discard_request_body(r);
-
-    r->headers_out.status = NGX_HTTP_OK;
-    r->headers_out.content_length_n = mlen;
-    r->headers_out.content_type.len = sizeof("text/html") - 1;
-    r->headers_out.content_type.data = (u_char *) "text/html";
-
-    if (r->method == NGX_HTTP_HEAD)
+    else 
     {
-	rc = ngx_http_send_header(r);
-	if (rc == NGX_ERROR || rc > NGX_OK || r->header_only)
-	    return rc;
+      rel_conn(zmq_config->m_cpool, &con);
+      
+      mlen = zmq_msg_size(&msg);
+      string = ngx_pcalloc(r->pool, mlen+1);
+      ngx_memcpy(string, zmq_msg_data(&msg), mlen);
+      
+      zmq_msg_close(&msg);
+      
+      /* ----------- END ZMQ LOOPY THING -----------*/
+
+    /* --------------- END MAGIC ------------------------- */
+      
+      rc = ngx_http_discard_request_body(r);
+
+      r->headers_out.status = NGX_HTTP_OK;
+      r->headers_out.content_length_n = mlen;
+      r->headers_out.content_type.len = sizeof("text/plain") - 1;
+      r->headers_out.content_type.data = (u_char *) "text/plain";
+
+      if (r->method == NGX_HTTP_HEAD)
+      {
+	  rc = ngx_http_send_header(r);
+	  if (rc == NGX_ERROR || rc > NGX_OK || r->header_only)
+	      return rc;
+      }
     }
   }
-  
   b = ngx_pcalloc(r->pool, sizeof(ngx_buf_t));
 
   if (b == NULL) 
