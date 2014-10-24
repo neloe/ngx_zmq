@@ -245,13 +245,6 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
       r->headers_out.content_length_n = mlen;
       r->headers_out.content_type.len = sizeof("text/plain") - 1;
       r->headers_out.content_type.data = (u_char *) "text/plain";
-
-      if (r->method == NGX_HTTP_HEAD)
-      {
-	  rc = ngx_http_send_header(r);
-	  if (rc == NGX_ERROR || rc > NGX_OK || r->header_only)
-	      return rc;
-      }
     }
   }
   ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "ngx_zmq: alloc'ing buffer");
