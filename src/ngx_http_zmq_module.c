@@ -187,8 +187,7 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
   /*set the parameters, because things are stupid*/
   set_endpt(zmq_config->m_cpool, zmq_config->zmq_endpoint);
   set_socktype(zmq_config->m_cpool, stype);
-  ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "ngx_zmq got a request with content_length_n %i", (int)r->headers_in.content_length_n);
-  ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "socket type %d, %d", stype, ZMQ_PUSH);
+  ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, "ngx_zmq got a request with content_length_n %i", (int)r->headers_in.content_length_n);
 /* --------------- BEGIN MAGIC ------------------------- */
 
   /* If there's an empty body, it's a bad request */
@@ -209,7 +208,7 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
     cpyd += min((c1->buf->last - c1->buf->pos), r->headers_in.content_length_n - cpyd);
   }
   
-  ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "ngx_zmq sending %s to %s", (char*)input, zmq_config->m_cpool->m_endpt);
+  ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, "ngx_zmq sending %s to %s", (char*)input, zmq_config->m_cpool->m_endpt);
   /* ----------- ZMQ LOOPY THING -------------- */
   conn* con = get_conn(zmq_config->m_cpool);
   void* sock = con->m_sock;
@@ -221,7 +220,7 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
   } while (to_ms(clock() - start) < to && zrc == -1 && zmq_errno() == EAGAIN);
   if (zrc == -1) /* send errored for some reason */
   {
-    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,"ngx_zmq erroring out on send");
+    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "ngx_zmq send: zrc: %d, errstr: %s, errno: %d, EAGAIN: %d", zrc, zmq_strerror(zmq_errno()), zmq_errno(), EAGAIN);
     if (zmq_errno() == EAGAIN)
     {
       rc = header_only_response(r, NGX_HTTP_GATEWAY_TIME_OUT);
@@ -243,11 +242,10 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
     do 
     {
       zrc = zmq_msg_recv(&msg, sock, ZMQ_NOBLOCK);
-    } while (to_ms(clock() - start) < to && zrc == -1 && zmq_errno() == EAGAIN);
-    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "ngx_zmq recv: zrc: %d, errstr: %s, errno: %d, EAGAIN: %d", zrc, zmq_strerror(zmq_errno()), zmq_errno(), EAGAIN);
+    } while (to_ms(clock() - start) < to && zrc == -1 && zmq_errno() == EAGAIN); 
     if (zrc == -1)
     {
-      ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,"ngx_zmq erroring out on recv, %d", zmq_errno());
+      ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "ngx_zmq recv: zrc: %d, errstr: %s, errno: %d, EAGAIN: %d", zrc, zmq_strerror(zmq_errno()), zmq_errno(), EAGAIN);
       if (zmq_errno() == EAGAIN)
       {
 	rc = header_only_response(r, NGX_HTTP_GATEWAY_TIME_OUT);
@@ -261,11 +259,11 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
     else 
     {          
       mlen = zmq_msg_size(&msg);
-      ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,"ngx_zmq got message of length %i", mlen);
+      ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0,"ngx_zmq got message of length %i", mlen);
       rel_conn(zmq_config->m_cpool, &con);
       string = ngx_pcalloc(r->pool, mlen+1);
       ngx_memcpy(string, zmq_msg_data(&msg), mlen);
-      ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,"ngx_zmq got message %s", (char*)string );
+      ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0,"ngx_zmq got message %s", (char*)string );
       
       zmq_msg_close(&msg);
       
@@ -281,7 +279,7 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
       r->headers_out.content_type.data = (u_char *) "text/plain";
     }
   }
-  ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "ngx_zmq: alloc'ing buffer");
+  ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, "ngx_zmq: alloc'ing buffer");
   b = ngx_pcalloc(r->pool, sizeof(ngx_buf_t));
 
   if (b == NULL) 
@@ -292,19 +290,19 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
 
   out.buf = b;
   out.next = NULL;
-  ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "ngx_zmq: setting up to return %s", string);
+  ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, "ngx_zmq: setting up to return %s", string);
   b->pos = string; /* first position in memory of the data */
   b->last = string + mlen; /* last position */
 
   b->memory = 1; /* content is in read-only memory */
 
   b->last_buf = 1; /* there will be no more buffers in the request */
-  ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "ngx_zmq: sending header");
+  ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, "ngx_zmq: sending header");
   rc = ngx_http_send_header(r);
   if (rc == NGX_ERROR || rc > NGX_OK || r->header_only)
     return rc;
 
-  ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "ngx_zmq: completed, returning");
+  ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, "ngx_zmq: completed, returning");
 
   return ngx_http_output_filter(r, &out);
 

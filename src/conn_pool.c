@@ -22,7 +22,9 @@ void set_endpt ( connpool* cp, ngx_str_t endpt )
   {
     cp -> m_endpt = calloc(endpt.len + 1, 1);
     ngx_memcpy(cp->m_endpt, endpt.data, endpt.len);
+#if DEBUG
     fprintf(stderr,"Setting endpoint to: %s\n", cp->m_endpt);
+#endif
   }
   return;
 }
