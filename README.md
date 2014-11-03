@@ -43,16 +43,15 @@ The sample server will always reply with "World"
 ### With the lua-nginx-module
 [As per this issue](https://github.com/openresty/lua-nginx-module/issues/415), we cannot just do a ngx.location.capture() from the lua nginx module.  This requires a bit of a workaround.  Try:
 ```nginx
-location ~ /zmq/proxy/(?<target>[\S]+) {
-internal; # so only this server can access this
-proxy_pass http://localhost/zmq/$1;
+  location ~ /zmq/proxy/(?<target>[\S]+) {
+  internal; # so only this server can access this
+  proxy_pass http://127.0.0.1/zmq/$1;
 }
 
 location /zmq/my_endpoint/ {
-internal;
-zmq_endpoint "tcp://my.endpoint.org:5555";
-zmq_timeout 10;
-zmq;
+  zmq_endpoint "tcp://my.endpoint.org:5555";
+  zmq_timeout 10;
+  zmq;
 }
 ```
 and in Lua (assuming [readurl](https://github.com/jamesmarlowe/lua-resty-readurl) is available):
@@ -64,6 +63,27 @@ local reply, err = readurl.capture("/zmq/proxy/my_endpoint/",
 )
 ```
 Using appropriate options.  You could use other request frameworks as well (one such is mentioned in the above linked issue).
+
+## Supported Socket types
+ngx_zmq allows using REQ sockets, PUSH sockets, and PUB sockets.  The socket type is set with the zmq_socktype.  Examples:
+```nginx
+location /zmq1/ {
+  zmq_endpoint "tcp://localhost:5555";
+  zmq_socktype PUSH;
+}
+
+location /zmq2/ {
+  zmq_endpoint "tcp://localhost:5556";
+  zmq_socktype REQ;
+}
+
+location /zmq3/ {
+  zmq_endpoint "tcp://localhost:5557";
+  zmq_socktype PUB;
+}
+```
+
+Invalid/unrecognized socktype arguments force a default to REQ.
 
 ## Error handling
 ngx_zmq will give the following codes/request bodies under the specified conditions:
