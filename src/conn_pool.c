@@ -109,6 +109,8 @@ void free_pool ( connpool** cp )
     i = it;
   }
   /*I do not want to muck with the memory pools or the context*/
+  if ((*cp)->m_endpt)
+    free((*cp)->m_endpt);
   (*cp)->m_ctx = NULL;
   ngx_free(*cp);
   *cp = NULL;
