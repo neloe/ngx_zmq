@@ -27,6 +27,12 @@ void set_endpt ( connpool* cp, ngx_str_t endpt )
   return;
 }
 
+void set_socktype(connpool* cp, const int stype)
+{
+  cp->m_stype = stype;
+  return;
+}
+
 
 conn* init_conn(connpool* cp)
 {
