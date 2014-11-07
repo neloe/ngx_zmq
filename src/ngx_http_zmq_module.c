@@ -234,7 +234,7 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
   else if (stype != ZMQ_REQ) /* This is either a PUSH or a PUB socket... no recv */
   {
     rel_conn(zmq_config->m_cpool, &con);
-    return header_only_response(r, NGX_HTTP_OK); 
+    return header_only_response(r, NGX_HTTP_ACCEPTED); 
   }
   else
   {

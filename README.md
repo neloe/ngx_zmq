@@ -92,6 +92,7 @@ ngx_zmq will give the following codes/request bodies under the specified conditi
 |-----------|--------------|----------|
 | Gateway Timeout (504) | <empty> | send/recv times out|
 | Bad Gateway (502) | ZeroMQ error message | send/recv fails, but does not timeout (errno != EAGAIN)|
+| Accepted (202) | <empty> | no error from sending over a PUSH/PUB socket |
 | OK (200) | Response from ZMQ server | successful round-trip (from ZMQ_REQ socket|
 
 ## Reference Materials
