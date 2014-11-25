@@ -149,7 +149,6 @@ static ngx_int_t header_only_response(ngx_http_request_t *r, ngx_int_t err)
   r->headers_out.status = err;
   r->header_only = 1;
   r->headers_out.content_length_n = 0;
-  ngx_http_finalize_request(r, rc);
   int rc = ngx_http_send_header(r);
   ngx_http_finalize_request(r, rc);
   return rc;
