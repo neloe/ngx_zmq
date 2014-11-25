@@ -149,7 +149,10 @@ static ngx_int_t header_only_response(ngx_http_request_t *r, ngx_int_t err)
   r->headers_out.status = err;
   r->header_only = 1;
   r->headers_out.content_length_n = 0;
-  return ngx_http_send_header(r);
+  ngx_http_finalize_request(r, rc);
+  int rc = ngx_http_send_header(r);
+  ngx_http_finalize_request(r, rc);
+  return rc;
 }
 
 static void zmq_err_reply(ngx_http_request_t *r, unsigned char ** string)
@@ -225,6 +228,7 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
     {
       rc = header_only_response(r, NGX_HTTP_GATEWAY_TIME_OUT);
       free_conn(&con);
+      ngx_http_finalize_request(r, rc);
       return rc;
     }
     free_conn(&con);
@@ -250,6 +254,7 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
       {
 	rc = header_only_response(r, NGX_HTTP_GATEWAY_TIME_OUT);
 	free_conn(&con);
+	ngx_http_finalize_request(r, rc);
 	return rc;
       }
       free_conn(&con);
@@ -285,6 +290,7 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
   if (b == NULL) 
   {
       ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "Failed to allocate response buffer.");
+      ngx_http_finalize_request(r, NGX_HTTP_INTERNAL_SERVER_ERROR);
       return NGX_HTTP_INTERNAL_SERVER_ERROR;
   }
 
@@ -299,11 +305,11 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
   b->last_buf = 1; /* there will be no more buffers in the request */
   ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, "ngx_zmq: sending header");
   rc = ngx_http_send_header(r);
+  ngx_http_finalize_request(r, rc);
   if (rc == NGX_ERROR || rc > NGX_OK || r->header_only)
     return rc;
 
   ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, "ngx_zmq: completed, returning");
-
   return ngx_http_output_filter(r, &out);
 
 }
