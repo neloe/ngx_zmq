@@ -79,6 +79,7 @@ HTTP_MODULES="$HTTP_MODULES ngx_http_zmq_module"
 NGX_ADDON_DEPS="$NGX_ADDON_DEPS"
 NGX_ADDON_SRCS="$NGX_ADDON_SRCS \
                 $ngx_addon_dir/src/ngx_http_zmq_module.c\
-                $ngx_addon_dir/src/conn_pool.c"
+                $ngx_addon_dir/src/conn_pool.c\
+                $ngx_addon_dir/src/ngx_zmq_utils.c"
 
 have=NGX_ZEROMQ_MODULE . auto/have
