@@ -242,11 +242,47 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
   else
   {
     zmq_msg_init(&msg);
-    do 
+    /*do 
     {
       zrc = zmq_msg_recv(&msg, sock, ZMQ_NOBLOCK);
-    } while (to_ms(clock() - start) < to && zrc == -1 && zmq_errno() == EAGAIN); 
-    if (zrc == -1)
+    } while (to_ms(clock() - start) < to && zrc == -1 && zmq_errno() == EAGAIN); */
+    zmq_pollitem_t items [1] = {{sock, 0, ZMQ_POLLIN, 0}};
+    unsigned int rto = to - to_ms(clock() - start);
+    int prc = zmq_poll(items, 1, rto);
+    switch (prc)
+    {
+      case 0:
+	ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "ngx_zmq recv: timeout after %s ms", rto);
+	rc = header_only_response(r, NGX_HTTP_GATEWAY_TIME_OUT);
+	free_conn(&con);
+	ngx_http_finalize_request(r, rc);
+	return rc;
+      case 1:
+	zmq_msg_recv(&msg, sock, 0);
+	mlen = zmq_msg_size(&msg);
+	ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0,"ngx_zmq got message of length %i", mlen);
+	rel_conn(zmq_config->m_cpool, &con);
+	string = ngx_pcalloc(r->pool, mlen+1);
+	ngx_memcpy(string, zmq_msg_data(&msg), mlen);
+	ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0,"ngx_zmq got message %s", (char*)string );
+	
+	zmq_msg_close(&msg);
+	
+	rc = ngx_http_discard_request_body(r);
+
+	r->headers_out.status = NGX_HTTP_OK;
+	r->headers_out.content_length_n = mlen;
+	r->headers_out.content_type.len = sizeof("text/plain") - 1;
+	r->headers_out.content_type.data = (u_char *) "text/plain";
+	break;
+      default:
+	ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "ngx_zmq recv: error: (rc=%d) %s", zmq_errno(), zmq_strerror(zmq_errno()));
+	free_conn(&con);
+	zmq_err_reply(r, &string);
+	mlen = strlen(zmq_strerror(zmq_errno()));
+    }
+    
+    /*if (zrc == -1)
     {
       ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "ngx_zmq recv: zrc: %d, errstr: %s, errno: %d, EAGAIN: %d", zrc, zmq_strerror(zmq_errno()), zmq_errno(), EAGAIN);
       if (zmq_errno() == EAGAIN)
@@ -270,18 +306,14 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
       ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0,"ngx_zmq got message %s", (char*)string );
       
       zmq_msg_close(&msg);
-      
-      /* ----------- END ZMQ LOOPY THING -----------*/
-
-    /* --------------- END MAGIC ------------------------- */
-      
+    
       rc = ngx_http_discard_request_body(r);
 
       r->headers_out.status = NGX_HTTP_OK;
       r->headers_out.content_length_n = mlen;
       r->headers_out.content_type.len = sizeof("text/plain") - 1;
       r->headers_out.content_type.data = (u_char *) "text/plain";
-    }
+    }*/
   }
   ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, "ngx_zmq: alloc'ing buffer");
   b = ngx_pcalloc(r->pool, sizeof(ngx_buf_t));
@@ -308,7 +340,7 @@ ngx_http_zmq_handler(ngx_http_request_t *r)
   if (rc == NGX_ERROR || rc > NGX_OK || r->header_only)
     return rc;
 
-  ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, "ngx_zmq: completed, returning");
+  ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, "ngx_zmq: completed, returning after %d ms", to_ms(clock() - start));
   return ngx_http_output_filter(r, &out);
 
 }
