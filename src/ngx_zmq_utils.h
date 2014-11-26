@@ -15,10 +15,10 @@ int spoll(void* sock, int toms);
 
 typedef struct {
   clock_t _last;
-  int _remain, _total;
+  double _remain, _total;
 } ztimer_t;
 
-static int to_ms(const clock_t delta) {return (int)((float)delta / CLOCKS_PER_SEC * 1000);}
+double to_ms(const clock_t delta);
 
 /*!
  * \brief Sets up a timer object
@@ -46,6 +46,6 @@ int time_left(ztimer_t * timer);
  * \post None
  * \returns the time elapsed
  */
-int time_elapsed(ztimer_t * timer);
+double time_elapsed(ztimer_t* timer);
 
 void build_reply_header(ngx_http_request_t *r, const int len, const int status);

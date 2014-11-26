@@ -283,7 +283,7 @@ static ngx_int_t ngx_http_zmq_handler(ngx_http_request_t *r)
       if (!(rc == NGX_ERROR || rc > NGX_OK || r->header_only))
       {
 	timer_update(&timer);
-	ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, "ngx_zmq: completed, returning after %d ms", to_ms(time_elapsed(&timer)));
+	ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, "ngx_zmq: completed, returning after %f ms", time_elapsed(&timer));
 	rc = ngx_http_output_filter(r, &out);
       }
     }

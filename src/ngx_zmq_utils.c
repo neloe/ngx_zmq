@@ -36,10 +36,10 @@ void timer_update(ztimer_t * timer)
 
 int time_left(ztimer_t* timer)
 {
-  return timer->_remain;
+  return (int)(timer->_remain);
 }
 
-int time_elapsed(ztimer_t* timer)
+double time_elapsed(ztimer_t* timer)
 {
   return timer->_total;
 }
@@ -52,6 +52,12 @@ void build_reply_header(ngx_http_request_t* r, const int len, const int status)
   r->headers_out.content_type.len = sizeof("text/plain") - 1;
   r->headers_out.content_type.data = (u_char *) "text/plain";
   return;
+}
+
+double to_ms(const clock_t delta)
+{
+  static const double FREQ = 1000.0 / CLOCKS_PER_SEC;
+  return (double) delta * FREQ;
 }
 
 
