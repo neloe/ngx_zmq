@@ -375,7 +375,7 @@ static int get_socktype(ngx_http_request_t *r)
     return ZMQ_PUSH;
   if (strcmp("PUB", type) == 0)
     return ZMQ_PUB;
-  
-  ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "Invalid socket type %s, defaulting to ZMQ_REQ", type);
+  if (strcmp("", type))
+    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "Invalid socket type %s, defaulting to ZMQ_REQ", type);
   return ZMQ_REQ;
 }
